@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>믿음친구 — 신앙상담 AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff9f5;
+    --surface: #ffffff;
+    --surface2: #fdf0e8;
+    --border: rgba(255,160,100,0.15);
+    --accent: #ff8c61;
+    --accent2: #ffb347;
+    --accent3: #ffd6b0;
+    --text: #3d2b1f;
+    --text-muted: #b0907a;
+    --user-bubble: #ff8c61;
+    --ai-bubble: #ffffff;
+    --shadow: rgba(255,140,97,0.12);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Nanum Gothic',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  body::before { content:''; position:fixed; top:0; left:0; right:0; height:200px; background:linear-gradient(180deg,#fff3ec 0%,transparent 100%); pointer-events:none; z-index:0; }
+  body::after { content:''; position:fixed; bottom:0; right:0; width:300px; height:300px; background:radial-gradient(ellipse,rgba(255,179,71,.08) 0%,transparent 70%); pointer-events:none; z-index:0; }
+
+  .header { position:relative; z-index:10; padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,249,245,.95); backdrop-filter:blur(20px); box-shadow:0 2px 12px var(--shadow); }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:38px; height:38px; background:linear-gradient(135deg,#ff8c61,#ffb347); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 12px rgba(255,140,97,.3); }
+  .logo-name { font-family:'Gaegu',cursive; font-size:20px; font-weight:800; color:var(--text); }
+  .logo-sub { font-size:11px; color:var(--text-muted); }
+  .status { display:flex; align-items:center; gap:6px; background:rgba(255,140,97,.08); padding:5px 12px; border-radius:20px; }
+  .dot { width:7px; height:7px; border-radius:50%; background:#ff8c61; box-shadow:0 0 6px #ff8c61; animation:pd 2s infinite; }
+  @keyframes pd { 0%,100%{opacity:1}50%{opacity:.4} }
+  .status span { font-size:11px; color:var(--accent); font-weight:500; }
+
+  .chat-area { flex:1; overflow-y:auto; padding:24px 18px; position:relative; z-index:5; scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:rgba(255,140,97,.15) transparent; }
+  .chat-area::-webkit-scrollbar { width:4px; }
+  .chat-area::-webkit-scrollbar-thumb { background:rgba(255,140,97,.2); border-radius:2px; }
+
+  .welcome { text-align:center; padding:36px 16px; max-width:440px; margin:0 auto; }
+  .welcome-emoji { font-size:56px; margin-bottom:16px; animation:fl 3s ease-in-out infinite; display:block; filter:drop-shadow(0 4px 12px rgba(255,140,97,.3)); }
+  @keyframes fl { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
+  .welcome h2 { font-family:'Gaegu',cursive; font-size:24px; font-weight:800; margin-bottom:10px; line-height:1.5; color:var(--text); }
+  .welcome p { color:var(--text-muted); font-size:14px; line-height:1.8; margin-bottom:24px; }
+  .quick-topics { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .qt { background:white; border:1.5px solid var(--border); border-radius:22px; padding:8px 16px; font-size:13px; cursor:pointer; transition:all .2s; color:var(--text-muted); font-family:'Nanum Gothic',sans-serif; box-shadow:0 2px 8px var(--shadow); }
+  .qt:hover { border-color:var(--accent); color:var(--accent); background:#fff5f0; transform:translateY(-1px); box-shadow:0 4px 14px var(--shadow); }
+
+  .msg-group { margin-bottom:18px; animation:mi .3s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes mi { from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none} }
+  .msg { display:flex; gap:10px; align-items:flex-start; }
+  .msg.user { flex-direction:row-reverse; }
+  .avatar { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; margin-top:2px; box-shadow:0 2px 8px var(--shadow); }
+  .avatar.ai { background:linear-gradient(135deg,#ff8c61,#ffb347); }
+  .avatar.user { background:linear-gradient(135deg,#ffd6b0,#ffb347); }
+  .bwrap { max-width:74%; }
+  .bubble { padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.75; }
+  .bubble.ai { background:white; border:1.5px solid var(--border); border-top-left-radius:4px; color:var(--text); box-shadow:0 2px 10px var(--shadow); }
+  .bubble.user { background:linear-gradient(135deg,#ff8c61,#ff7043); border-top-right-radius:4px; color:white; box-shadow:0 2px 10px rgba(255,112,67,.25); }
+  .btime { font-size:11px; color:var(--text-muted); margin-top:4px; padding:0 3px; }
+  .msg.user .btime { text-align:right; }
+  .tts-btn { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 12px; background:rgba(255,140,97,.08); border:1px solid rgba(255,140,97,.2); border-radius:20px; font-size:11px; color:var(--accent); cursor:pointer; transition:all .2s; font-family:'Nanum Gothic',sans-serif; }
+  .tts-btn:hover { background:rgba(255,140,97,.15); }
+  .tts-btn.playing { background:rgba(255,140,97,.2); }
+
+  .thinking { display:flex; gap:5px; align-items:center; padding:13px 16px; background:white; border:1.5px solid var(--border); border-radius:18px; border-top-left-radius:4px; width:70px; box-shadow:0 2px 10px var(--shadow); }
+  .td { width:7px; height:7px; background:var(--accent); border-radius:50%; animation:bo 1.2s ease-in-out infinite; opacity:.6; }
+  .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+  @keyframes bo { 0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(-5px);opacity:1} }
+
+  .input-area { position:relative; z-index:10; background:rgba(255,249,245,.97); backdrop-filter:blur(20px); border-top:1px solid var(--border); padding:12px 16px; box-shadow:0 -4px 20px var(--shadow); }
+  .input-row { display:flex; gap:8px; align-items:flex-end; max-width:860px; margin:0 auto; }
+  .input-box { flex:1; background:white; border:1.5px solid var(--border); border-radius:20px; padding:11px 16px; font-size:14px; color:var(--text); font-family:'Nanum Gothic',sans-serif; resize:none; outline:none; min-height:46px; max-height:120px; transition:all .2s; line-height:1.5; box-shadow:0 2px 8px var(--shadow); }
+  .input-box:focus { border-color:var(--accent); box-shadow:0 2px 12px rgba(255,140,97,.2); }
+  .input-box::placeholder { color:var(--text-muted); }
+  .btn-icon { width:46px; height:46px; border-radius:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:19px; transition:all .2s; flex-shrink:0; }
+  .btn-voice { background:white; border:1.5px solid var(--border); color:var(--text-muted); box-shadow:0 2px 8px var(--shadow); }
+  .btn-voice:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-voice.rec { background:#fff0ee; border-color:#ff6464; color:#ff6464; animation:pr 1s ease-in-out infinite; }
+  @keyframes pr { 0%,100%{box-shadow:0 0 0 0 rgba(255,100,100,.3)}50%{box-shadow:0 0 0 8px rgba(255,100,100,0)} }
+  .btn-send { background:linear-gradient(135deg,#ff8c61,#ff7043); color:white; font-size:17px; box-shadow:0 4px 14px rgba(255,112,67,.3); }
+  .btn-send:hover { transform:scale(1.05); box-shadow:0 6px 20px rgba(255,112,67,.4); }
+  .btn-send:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .voice-overlay { display:none; position:fixed; inset:0; background:rgba(61,43,31,.7); z-index:100; align-items:center; justify-content:center; flex-direction:column; gap:22px; backdrop-filter:blur(8px); }
+  .voice-overlay.active { display:flex; }
+  .vorb { width:110px; height:110px; border-radius:50%; background:radial-gradient(circle,rgba(255,140,97,.7) 0%,rgba(255,140,97,.1) 60%,transparent 100%); display:flex; align-items:center; justify-content:center; font-size:44px; animation:op 1s ease-in-out infinite; }
+  @keyframes op { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,140,97,.4)}50%{transform:scale(1.07);box-shadow:0 0 0 18px rgba(255,140,97,0)} }
+  .vtext { font-size:15px; color:white; }
+  .vstop { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:white; padding:9px 22px; border-radius:22px; font-size:14px; cursor:pointer; font-family:'Nanum Gothic',sans-serif; }
+  .vstop:hover { background:rgba(255,255,255,.25); }
+
+  .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(16px); background:white; border:1px solid var(--border); padding:9px 18px; border-radius:20px; font-size:13px; color:var(--text-muted); opacity:0; transition:all .3s; z-index:50; pointer-events:none; white-space:nowrap; box-shadow:0 4px 16px var(--shadow); }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  #pwScreen { position:fixed; inset:0; z-index:999; background:linear-gradient(160deg,#fff8f3 0%,#ffecd9 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
+  #pwScreen .pw-box { background:white; border:1.5px solid var(--border); border-radius:28px; padding:36px 32px; text-align:center; width:300px; box-shadow:0 8px 32px var(--shadow); }
+  #pwScreen .pw-emoji { font-size:52px; margin-bottom:12px; display:block; }
+  #pwScreen h2 { font-family:'Gaegu',cursive; font-size:22px; margin-bottom:6px; color:var(--text); }
+  #pwScreen p { font-size:13px; color:var(--text-muted); margin-bottom:20px; }
+  #pwScreen input { width:100%; background:#fdf5f0; border:1.5px solid var(--border); border-radius:12px; padding:12px 16px; font-size:16px; color:var(--text); outline:none; text-align:center; letter-spacing:4px; margin-bottom:12px; font-family:'Nanum Gothic',sans-serif; transition:border-color .2s; }
+  #pwScreen input:focus { border-color:var(--accent); }
+  #pwScreen button { width:100%; background:linear-gradient(135deg,#ff8c61,#ff7043); color:white; border:none; border-radius:12px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Nanum Gothic',sans-serif; box-shadow:0 4px 14px rgba(255,112,67,.3); transition:all .2s; }
+  #pwScreen button:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(255,112,67,.4); }
+  #pwScreen .pw-error { color:#ff6464; font-size:13px; margin-top:8px; display:none; }
+
+  @media(max-width:500px){ .header{padding:12px 14px;} .chat-area{padding:16px 12px;} .input-area{padding:10px 12px;} .bwrap{max-width:84%;} }
+  #pwScreen {
+    position:fixed; inset:0; z-index:999;
+    background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+  }
+  #pwScreen .pw-box {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:20px; padding:36px 32px; text-align:center; width:300px;
+  }
+  #pwScreen .pw-emoji { font-size:48px; margin-bottom:12px; display:block; }
+  #pwScreen h2 { font-family:'Gaegu',cursive; font-size:22px; margin-bottom:6px; }
+  #pwScreen p { font-size:13px; color:var(--text-muted); margin-bottom:20px; }
+  #pwScreen input {
+    width:100%; background:var(--bg); border:1px solid var(--border);
+    border-radius:10px; padding:12px 16px; font-size:16px; color:var(--text);
+    outline:none; text-align:center; letter-spacing:4px; margin-bottom:12px;
+    font-family:'Nanum Gothic',sans-serif;
+  }
+  #pwScreen input:focus { border-color:var(--accent); }
+  #pwScreen button {
+    width:100%; background:linear-gradient(135deg,var(--accent),#9d8aed);
+    color:#1a1030; border:none; border-radius:10px; padding:12px;
+    font-size:15px; font-weight:600; cursor:pointer; font-family:'Nanum Gothic',sans-serif;
+  }
+  #pwScreen .pw-error { color:#ff6464; font-size:13px; margin-top:8px; display:none; }
+</style>
+</head>
+<body>
+
+<div id="pwScreen">
+  <div class="pw-box">
+    <span class="pw-emoji">✝️</span>
+    <h2>믿음친구</h2>
+    <p>비밀번호를 입력해줘! 🔑</p>
+    <input type="password" id="pwInput" placeholder="••••••••" maxlength="20" />
+    <button onclick="checkPw()">들어갈게요 🚪✨</button>
+    <div class="pw-error" id="pwError">앗, 비밀번호가 틀렸어ㅠㅠ 다시 해봐!</div>
+  </div>
+</div>
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">🌙</div>
+    <div>
+      <div class="logo-name">마음친구</div>
+      <div class="logo-sub">AI 고민상담</div>
+    </div>
+  </div>
+  <div class="status">
+    <div class="dot"></div>
+    <span>언제나 여기 있어! 🌿</span>
+  </div>
+</div>
+
+<div id="voiceBar" style="position:relative;z-index:10;background:rgba(255,249,245,.95);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(255,140,97,.08);">
+  <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🎙 목소리</span>
+  <select id="voiceSelect" style="flex:1;background:white;border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--text);outline:none;font-family:'Nanum Gothic',sans-serif;">
+    <option value="">불러오는 중...</option>
+  </select>
+</div>
+<div class="chat-area" id="chatArea">
+  <div class="welcome" id="welcomeScreen">
+    <span class="welcome-emoji">✝️</span>
+    <h2>안녕~ 나는 믿음친구야! 🌿</h2>
+    <p>신앙 고민이 있어? 편하게 털어놔봐~<br>말씀이랑 기도로 같이 걸어갈게! 🙏✨</p>
+    <div class="quick-topics">
+      <div class="qt" onclick="quickStart('믿음이 흔들리고 하나님이 멀게 느껴져.')">🙏 믿음이 흔들려요</div>
+      <div class="qt" onclick="quickStart('기도가 잘 안 되고 응답이 없는 것 같아.')">💬 기도가 어려워요</div>
+      <div class="qt" onclick="quickStart('교회 생활이 힘들고 사람들과 갈등이 있어.')">⛪ 교회 생활 고민</div>
+      <div class="qt" onclick="quickStart('하나님의 뜻을 알고 싶은데 잘 모르겠어.')">📖 하나님의 뜻</div>
+      <div class="qt" onclick="quickStart('죄책감과 용서받지 못한 느낌이 들어.')">💗 죄책감과 용서</div>
+      <div class="qt" onclick="quickStart('그냥 신앙 이야기를 들어줬으면 해.')">🤝 그냥 들어주세요</div>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea class="input-box" id="msgInput" placeholder="오늘 어떤 마음이야? 편하게 얘기해봐~ 🌿" rows="1"></textarea>
+    <button class="btn-icon btn-voice" id="voiceBtn" onclick="toggleVoice()" title="음성으로 말하기">🎙</button>
+    <button class="btn-icon btn-send" id="sendBtn" onclick="sendMessage()" title="전송">➤</button>
+  </div>
+</div>
+
+<div class="voice-overlay" id="voiceOverlay">
+  <div class="vorb">🎙</div>
+  <div class="vtext">말해봐~ 듣고 있어! 🎙✨</div>
+  <button class="vstop" onclick="stopVoice()">그만할게 🙅</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_KEYS = [
+  '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',
+  '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',
+  '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'
+];
+let currentKeyIndex = 0;
+const ELEVEN_KEY = 'sk_64da92d894bbca39d4f69ee032b19fbfa43815693155549d';
+const ELEVEN_VOICE_ID = 'cgSgspJ2msm6clMCkdW9';
+const GOOGLE_TTS_KEY = 'AIzaSyCj847cHAf2e7IQ98tZHb9ZL0UFgYy8x_w';
+const QUOTES = [
+  {tag:'전도', text:'우리는 하나님의 입이 되고 에수님의 입이 되어서, 전해야 할 것들을 전해야 한다.', src:'하늘누룩 2, p8'},
+  {tag:'전도', text:'우리가 하늘의 은혜를 받았다면, 우리도 이러한 은혜를 끼쳐 주는 사람, 살려 주는 사람이 되어야 한다.', src:'하늘누룩 2, p116'},
+  {tag:'전도', text:'사람의 말은 아무 소용 없다. 사람의 말에는 생명이 없고, 하나님의 말씀 안에는 생명이 있는 것이다.', src:'하늘누룩 2, p113'},
+  {tag:'기도', text:'언제 어디를 가든 무엇을 하든 하나님이 함께하시므로 우리는 염려할 것이 없다.', src:'하늘누룩 2, p111'},
+  {tag:'기도', text:'우리는 하나님 앞에서 신앙을 하고 있고 하나님의 도움이 필요한 사람들이다. 그러므로 우리 성도들은 항시 쉬지 말고 기도해야 한다.', src:'하늘누룩 2, p15'},
+  {tag:'기도', text:'우리는 기도를 하더라도 허황된 기도가 아니라 하나님 앞에 사실대로 기도해야 한다.', src:'하늘누룩 2, p34'},
+  {tag:'기도', text:'두세 사람이 기도하는 것도 하나님께서 들어 주신다 하였다.', src:'하늘누룩 2, p90'},
+  {tag:'감사', text:'이 말씀의 실체 된 우리는 정말 하나님께 감사드려야 한다. 감사의 표현은 일하는 것이다.', src:'하늘누룩 2, p10'},
+  {tag:'감사', text:'세상은 넓어도, 말씀으로 들어가서 믿는 사람은 몇 명 안 된다. 그러한 중에 이 말씀을 믿는 사람은 하나님께 택함 받은 사람이다.', src:'하늘누룩 2, p119'},
+  {tag:'감사', text:'우리는 정말 깨달았을 때 감사하는 것이 진짜 감사가 될 것이다.', src:'하늘누룩 2, p132'},
+  {tag:'겸손', text:'모든 사명자들은 사랑하는 마음으로 아래로 내려가야(낮아져야) 한다.', src:'하늘누룩 2, p14'},
+  {tag:'겸손', text:'우리의 스승이신 예수님은 정말 온갖 고생을 하시다가 십자가 지고 돌아가셨다. 하물며 그분의 피로 구원받고 그분의 제자가 된 우리는, 이 모양 저 모양 본 내거나 대접받으려 하거나 할 필요가 없는 것이다.', src:'하늘누룩 2, p21'},
+  {tag:'믿음', text:'우리는 믿음을 가져야 한다. 기왕 믿을 바에는 100 믿어야 하는 것이다.', src:'하늘누룩 2, p8'},
+  {tag:'믿음', text:'천국은 절대적인 믿음이 있는 자만이 들어가는 곳이다.', src:'하늘누룩 2, p18'},
+  {tag:'믿음', text:'믿음은 들음에서 난다고 하였으니, 알아야 바른 믿음이 생기는 것이다.', src:'하늘누룩 2, p19'},
+  {tag:'스스로', text:'소망이 이루어지는 때가 가까울수록 우리는 스스로 근신하여 죄짓는 자가 되지 않도록 해야 한다.', src:'하늘누룩 1, p83'},
+  {tag:'인내', text:'끝까지 견디는 자 구원 얻는다는 말씀 명심하라.', src:'하늘누룩 1, p32'},
+];
+
+function pickQuotes(userMsg) {
+  const keywords = {
+    '전도': ['전도','복음','알려','전해'],
+    '기도': ['기도','응답','하나님','기도'],
+    '감사': ['감사','은혜','축복'],
+    '겸손': ['겸손','교만','낮','높'],
+    '믿음': ['믿음','믿','확신','흔들'],
+    '스스로': ['나 자신','자신','반성','돌아'],
+    '인내': ['힘들','지쳐','포기','견디','고통','어려'],
+  };
+  let matched = [];
+  for (const [tag, kws] of Object.entries(keywords)) {
+    if (kws.some(k => userMsg.includes(k))) {
+      matched.push(...QUOTES.filter(q => q.tag === tag));
+    }
+  }
+  if (matched.length === 0) matched = QUOTES;
+  // 최대 4개만 랜덤 선택
+  matched = matched.sort(() => Math.random() - 0.5).slice(0, 4);
+  return matched.map(q => '[' + q.tag + '] "' + q.text + '" (' + q.src + ')').join('\n');
+}
+
+const SYSTEM = `너는 '믿음친구'야. 신앙 고민을 들어주는 따뜻한 AI 친구.
+반드시 순수한 한국어로만 답해. 영어 단어, 한자, 일본어, 외래어 절대 사용 금지. 외국어가 섞이면 완전히 한국어로 바꿔서 말해.
+
+[최우선 규칙: 공감 먼저]
+상대가 감정을 표현하면 (슬퍼, 힘들어, 외로워, 무서워 등) 반드시 그 감정을 먼저 받아줘.
+절대로 바로 질문하거나 조언하거나 신앙 얘기 꺼내지 마.
+예시:
+- 상대: "슬펐어" → "그랬구나~ 많이 힘들었겠다. 무슨 일이 있었어?"
+- 상대: "힘들어" → "많이 힘들었구나. 어떤 게 힘들었어?"
+- 상대: "외로워" → "외로웠구나~ 나 여기 있어. 얘기해줄래?"
+
+[말투] 자연스러운 반말. 아래 예시처럼:
+- "그랬구나~", "맞아, 그럴 수 있어", "괜찮아"
+- 문장 끝: ~해, ~야, ~어, ~구나, ~네
+- 금지 어미: ~하겠노, ~하노, ~것다, ~볼까요, ~드릴게요
+- 물음표(?)는 진짜 질문할 때만. "말해줘?" 이런 거 절대 금지.
+
+[대화 흐름]
+- 사용자 발화 4번 미만: 어록 절대 금지. 그냥 친구처럼 대화.
+- 사용자 발화 4번 이상이 되면 고민/슬픔 표현할 때: 어록 딱 한 개.
+- 어록 쓸 때: 공감 한 문장 → "어록 원문" (출처) → 위로 한 문장.
+- 어록은 반드시 앞뒤로 큰따옴표(" ")로 감싸줘. 예: "끝까지 견디는 자 구원 얻는다." (하늘누룩 1, p32)
+- 어록은 반드시 아래 [사용 가능한 어록] 목록에서만 골라 써. 목록에 없는 말은 절대 만들어내지 마. 출처도 목록에 있는 그대로만 써.
+- 어록이 목록에 없으면 그냥 어록 없이 위로만 해줘. 절대 지어내지 마.
+- 어록 원문 그대로. 각색 금지. 두 개 이상 금지.
+- 3~4문장으로 짧게. 이모지는 가끔만 (💛 🌿 ☀️ 🙏)
+- 위기상황(자해/자살)엔 1577-0199 안내.
+`;
+
+let isLoading = false, recognition = null, currentSpeech = null, history = [], isVoiceMode = false;
+const msgInput = document.getElementById('msgInput');
+const chatArea = document.getElementById('chatArea');
+
+msgInput.addEventListener('input', function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px'; });
+msgInput.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
+
+function nowTime(){ const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+function showToast(msg,ms=2500){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),ms); }
+function removeWelcome(){ const w=document.getElementById('welcomeScreen'); if(w)w.remove(); }
+
+function addMsg(role, text){
+  removeWelcome();
+  const isUser = role==='user';
+  const g=document.createElement('div'); g.className='msg-group';
+  const m=document.createElement('div'); m.className='msg '+(isUser?'user':'ai');
+  const av=document.createElement('div'); av.className='avatar '+(isUser?'user':'ai'); av.textContent=isUser?'🙂':'✝️';
+  const bw=document.createElement('div'); bw.className='bwrap';
+  const b=document.createElement('div'); b.className='bubble '+(isUser?'user':'ai');
+  b.textContent=text;
+  if(!isUser){
+    const tts=document.createElement('button'); tts.className='tts-btn'; tts.innerHTML='🔊 듣기';
+    tts.onclick=()=>speak(text,tts);
+    b.appendChild(document.createElement('br')); b.appendChild(tts);
+  }
+  const t=document.createElement('div'); t.className='btime'; t.textContent=nowTime();
+  bw.appendChild(b); bw.appendChild(t);
+  m.appendChild(av); m.appendChild(bw);
+  g.appendChild(m); chatArea.appendChild(g);
+  chatArea.scrollTop=chatArea.scrollHeight;
+}
+
+function addThinking(){
+  removeWelcome();
+  const g=document.createElement('div'); g.className='msg-group';
+  const m=document.createElement('div'); m.className='msg ai';
+  const av=document.createElement('div'); av.className='avatar ai'; av.textContent='🌙';
+  const th=document.createElement('div'); th.className='thinking';
+  th.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
+  m.appendChild(av); m.appendChild(th); g.appendChild(m); chatArea.appendChild(g);
+  chatArea.scrollTop=chatArea.scrollHeight;
+  return g;
+}
+
+async function sendMessage(text, voiceMode=false){
+  isVoiceMode = voiceMode;
+  const input=(text||msgInput.value).trim();
+  if(!input||isLoading) return;
+  msgInput.value=''; msgInput.style.height='auto';
+  isLoading=true; document.getElementById('sendBtn').disabled=true;
+  addMsg('user',input);
+  history.push({role:'user',content:input});
+  const thinking=addThinking();
+  try{
+    // 어록이 필요한 타이밍이면 관련 어록 몇 개만 추가
+    const turnCount = history.filter(h=>h.role==='user').length;
+    let systemContent = SYSTEM;
+    if (turnCount >= 4) {
+      const relevantQuotes = pickQuotes(input);
+      systemContent += '\n[사용 가능한 어록] 반드시 아래 목록에서만 골라서 원문 그대로 써줘. 목록에 없는 말은 절대 만들거나 추가하지 마. 출처도 아래 그대로 써줘.\n' + relevantQuotes;
+    }
+    const groqMessages=[{role:'system',content:systemContent},...history.slice(-10)];
+    let reply = '';
+    for(let attempt = 0; attempt < API_KEYS.length; attempt++){
+      const key = API_KEYS[currentKeyIndex];
+      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify({
+          model:'llama-3.3-70b-versatile',
+          messages:groqMessages,
+          max_tokens:400,
+          temperature:0.9
+        })
+      });
+      if(!res.ok){
+        const err=await res.json();
+        const msg = err.error?.message||'';
+        if(msg.includes('rate') || msg.includes('limit') || msg.includes('quota')){
+          currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+          if(attempt < API_KEYS.length - 1) continue;
+          thinking.remove(); addMsg('ai','오늘 대화 한도를 다 썼어ㅠ 내일 다시 얘기하자! 🙏'); return;
+        }
+        thinking.remove(); addMsg('ai','오류: '+msg); return;
+      }
+      const data=await res.json();
+      reply = data.choices?.[0]?.message?.content || '';
+      break;
+    }
+    thinking.remove();
+    if(!reply){ addMsg('ai','앗, 응답을 받지 못했어ㅠ 다시 말해줘!'); return; }
+    if(!reply){ addMsg('ai','앗, 응답을 받지 못했어ㅠ 다시 말해줘!'); return; }
+    // 라틴 알파벳 단어 제거
+    // 외국어 문자 무조건 제거 (한자+한글 조합도 처리)
+    function cleanKorean(text){
+      return text
+        .replace(/[a-zA-ZÀ-ɏͰ-ϿЀ-ӿ؀-ۿऀ-ॿঀ-৿਀-੿઀-૿଀-୿฀-๿぀-ヿ一-鿿㐀-䶿]+[가-힣]*/g, ' ')
+        .replace(/  +/g, ' ')
+        .trim();
+    }
+    const cleaned = cleanKorean(reply);
+    history.push({role:'assistant',content:cleaned});
+    addMsg('ai',cleaned);
+    if(isVoiceMode) speakAuto(cleaned);
+  }catch(e){
+    thinking.remove();
+    addMsg('ai','오류: '+e.message);
+    console.error(e);
+  }finally{
+    isLoading=false; document.getElementById('sendBtn').disabled=false;
+  }
+}
+
+function quickStart(t){ sendMessage(t); }
+
+async function elevenSpeak(text, onEnd){
+  const clean=text
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FEFF}\u{1F900}-\u{1F9FF}]/gu,'')
+    .replace(/[\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu,'')
+    .replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+  if(!clean){if(onEnd)onEnd();return;}
+  try{
+    const res=await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key='+GOOGLE_TTS_KEY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        input:{text:clean},
+        voice:{languageCode:'ko-KR',name:selectedGoogleVoice,ssmlGender:selectedGoogleVoice.includes('-C')||selectedGoogleVoice.includes('-D')?'MALE':'FEMALE'},
+        audioConfig:{audioEncoding:'MP3',speakingRate:0.95,pitch:1.0}
+      })
+    });
+    if(!res.ok){fallbackSpeak(clean,onEnd);return;}
+    const data=await res.json();
+    if(!data.audioContent){fallbackSpeak(clean,onEnd);return;}
+    const audio=new Audio('data:audio/mp3;base64,'+data.audioContent);
+    currentSpeech=audio;
+    audio.onended=()=>{currentSpeech=null;if(onEnd)onEnd();};
+    audio.onerror=()=>{currentSpeech=null;fallbackSpeak(clean,onEnd);};
+    audio.play();
+  }catch(e){fallbackSpeak(clean,onEnd);}
+}
+function fallbackSpeak(text,onEnd){
+  if(!window.speechSynthesis)return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ko-KR';u.rate=0.87;u.pitch=1.0;
+  const v=getBestKoVoice();if(v)u.voice=v;
+  currentSpeech=u;
+  u.onend=u.onerror=()=>{currentSpeech=null;if(onEnd)onEnd();};
+  speechSynthesis.speak(u);
+}
+function speakAuto(text){
+  elevenSpeak(text,()=>{currentSpeech=null;if(isVoiceMode)setTimeout(()=>toggleVoice(),500);});
+}
+
+function getBestKoVoice(){
+  const voices=speechSynthesis.getVoices();
+  // 여성 목소리 우선순위 (아이폰: Yuna, Android: Google 한국의, PC: Microsoft SunHi)
+  const femaleNames=['Yuna','유나','Google 한국의','Microsoft SunHi Online','Microsoft SunHi','Sun Hi'];
+  for(const name of femaleNames){
+    const v=voices.find(v=>v.name.includes(name));
+    if(v)return v;
+  }
+  // 그래도 없으면 ko-KR 중 첫번째
+  return voices.find(v=>v.lang==='ko-KR')||voices.find(v=>v.lang.startsWith('ko'))||null;
+}
+
+function speak(text,btn){
+  if(currentSpeech){
+    if(currentSpeech instanceof Audio){currentSpeech.pause();}
+    else{speechSynthesis.cancel();}
+    currentSpeech=null;
+    document.querySelectorAll('.tts-btn').forEach(b=>{b.innerHTML='🔊 듣기';b.classList.remove('playing');});
+    return;
+  }
+  btn.innerHTML='⏹ 멈추기';btn.classList.add('playing');
+  elevenSpeak(text,()=>{btn.innerHTML='🔊 듣기';btn.classList.remove('playing');});
+}
+
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('⚠️ 음성인식은 Chrome에서 지원돼요',3000);return;}
+  recognition=new SR();
+  recognition.lang='ko-KR'; recognition.continuous=false; recognition.interimResults=false;
+  recognition.onresult=e=>{
+    const t=e.results[0][0].transcript;
+    document.getElementById('voiceOverlay').classList.remove('active');
+    document.getElementById('voiceBtn').classList.remove('rec');
+    sendMessage(t, true);  // voiceMode=true → 자동 TTS
+  };
+  recognition.onerror=e=>{
+    document.getElementById('voiceOverlay').classList.remove('active');
+    document.getElementById('voiceBtn').classList.remove('rec');
+    if(e.error!=='aborted')showToast('음성 인식 실패. 다시 시도해주세요.');
+  };
+  recognition.onend=()=>{
+    document.getElementById('voiceOverlay').classList.remove('active');
+    document.getElementById('voiceBtn').classList.remove('rec');
+  };
+  recognition.start();
+  document.getElementById('voiceOverlay').classList.add('active');
+  document.getElementById('voiceBtn').classList.add('rec');
+}
+
+function stopVoice(){
+  isVoiceMode=false;
+  if(currentSpeech){speechSynthesis.cancel();currentSpeech=null;}
+  if(recognition)recognition.abort();
+  document.getElementById('voiceOverlay').classList.remove('active');
+  document.getElementById('voiceBtn').classList.remove('rec');
+}
+
+if(window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged',()=>speechSynthesis.getVoices());
+
+// 비밀번호
+function checkPw(){
+  const val = document.getElementById('pwInput').value;
+  if(val === 'qnrcjddl'){
+    document.getElementById('pwScreen').style.display='none';
+    
+  } else {
+    document.getElementById('pwError').style.display='block';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+  }
+}
+document.getElementById('pwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') checkPw(); });
+// 이미 인증된 경우
+
+
+// Google TTS 한국어 목소리 목록
+const googleVoices = [
+  {id:'ko-KR-Wavenet-A', label:'여성 A (자연스러움)'},
+  {id:'ko-KR-Wavenet-B', label:'여성 B (부드러움)'},
+  {id:'ko-KR-Wavenet-C', label:'남성 A (안정감)'},
+  {id:'ko-KR-Wavenet-D', label:'남성 B (깊은 목소리)'},
+  {id:'ko-KR-Standard-A', label:'여성 (스탠다드)'},
+  {id:'ko-KR-Standard-B', label:'여성 (스탠다드2)'},
+];
+let selectedGoogleVoice = 'ko-KR-Wavenet-A';
+
+function loadKoreanVoices(){
+  const sel = document.getElementById('voiceSelect');
+  sel.innerHTML = '';
+  googleVoices.forEach(v=>{
+    const opt = document.createElement('option');
+    opt.value = v.id;
+    opt.textContent = v.label;
+    sel.appendChild(opt);
+  });
+  sel.onchange = ()=>{ selectedGoogleVoice = sel.value; };
+}
+loadKoreanVoices();
+</script>
+</body>
+</html>
