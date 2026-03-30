@@ -335,13 +335,15 @@ async function sendMessage(text, voiceMode=false){
   history.push({role:'user',content:input});
   const thinking=addThinking();
   try{
-    // 어록 사이클: 4~5번 스몰토킹 후 어록 1번, 반복
+    // 어록 사이클: 4번 스몰토킹 후 어록 1번, 반복
     turnsSinceLastQuote++;
     const totalTurns = history.filter(h=>h.role==='user').length;
     let systemContent = SYSTEM;
     if (totalTurns >= 4 && turnsSinceLastQuote >= 4) {
       const relevantQuotes = pickQuotes(input);
-      systemContent += '\n[사용 가능한 어록] 반드시 아래 목록에서만 골라서 원문 그대로 써줘. 목록에 없는 말은 절대 만들거나 추가하지 마. 출처도 아래 그대로 써줘.\n' + relevantQuotes;
+      systemContent += '\n\n지금은 어록을 쓸 타이밍이야. 반드시 아래 어록 중 딱 하나만 골라서 써줘. 목록에 없는 말은 절대 만들지 마.\n' + relevantQuotes;
+    } else {
+      systemContent += '\n\n지금은 어록 없이 따뜻하게 스몰토킹만 해줘. 어록 절대 쓰지 마.';
     }
     const groqMessages=[{role:'system',content:systemContent},...history.slice(-10)];
     let reply = '';
